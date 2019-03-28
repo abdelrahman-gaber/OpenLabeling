@@ -42,7 +42,9 @@ WINDOW_NAME = 'OpenLabeling'
 TRACKBAR_IMG = 'Image'
 TRACKBAR_CLASS = 'Class'
 
-annotation_formats = {'PASCAL_VOC' : '.xml', 'YOLO_darknet' : '.txt'}
+# Note: We need classes names to be one word, for example "billiard ball" to be "billiard_ball"
+# This name convention is important for tex_format
+annotation_formats = {'PASCAL_VOC' : '.xml', 'YOLO_darknet' : '.txt', 'text_format' : '.txt'}
 TRACKER_DIR = os.path.join(OUTPUT_DIR, '.tracker')
 
 # selected bounding box
@@ -241,6 +243,12 @@ def voc_format(class_name, point_1, point_2):
     items = map(str, [class_name, xmin, ymin, xmax, ymax])
     return items
 
+def text_format(class_name, point_1, point_2):
+    # Order class_name xmin ymin xmax ymax
+    xmin, ymin = min(point_1[0], point_2[0]), min(point_1[1], point_2[1])
+    xmax, ymax = max(point_1[0], point_2[0]), max(point_1[1], point_2[1])
+    items = map(str, [class_name, xmin, ymin, xmax, ymax])
+    return ' '.join(items)
 
 def write_xml(xml_str, xml_path):
     # remove blank text before prettifying the xml
@@ -479,22 +487,41 @@ def edit_bbox(obj_to_edit, action):
 
         for ann_path in get_annotation_paths(path, annotation_formats):
             if '.txt' in ann_path:
-                # edit YOLO file
-                with open(ann_path, 'r') as old_file:
-                    lines = old_file.readlines()
+                if ('/text_format/' in ann_path) or ('\\text_format\\' in ann_path):
+                    # edit text file
+                    with open(ann_path, 'r') as old_file:
+                        lines = old_file.readlines()
 
-                yolo_line = yolo_format(class_index, (xmin, ymin), (xmax, ymax), width, height) # TODO: height and width ought to be stored
+                    txt_line = text_format(CLASS_LIST[class_index], (xmin, ymin), (xmax, ymax) )
 
-                with open(ann_path, 'w') as new_file:
-                    for line in lines:
-                        if line != yolo_line + '\n':
-                            new_file.write(line)
-                        elif 'change_class' in action:
-                            new_yolo_line = yolo_format(new_class_index, (xmin, ymin), (xmax, ymax), width, height)
-                            new_file.write(new_yolo_line + '\n')
-                        elif 'resize_bbox' in action:
-                            new_yolo_line = yolo_format(class_index, (new_x_left, new_y_top), (new_x_right, new_y_bottom), width, height)
-                            new_file.write(new_yolo_line + '\n')
+                    with open(ann_path, 'w') as new_file:
+                        for line in lines:
+                            if line != txt_line + '\n':
+                                new_file.write(line)
+                            elif 'change_class' in action:
+                                new_txt_line = text_format(CLASS_LIST[new_class_index], (xmin, ymin), (xmax, ymax) )
+                                new_file.write(new_txt_line + '\n')
+                            elif 'resize_bbox' in action:
+                                new_txt_line = text_format(CLASS_LIST[class_index], (new_x_left, new_y_top), (new_x_right, new_y_bottom) )
+                                new_file.write(new_txt_line + '\n')
+                else:
+                    # edit YOLO file
+                    with open(ann_path, 'r') as old_file:
+                        lines = old_file.readlines()
+
+                    yolo_line = yolo_format(class_index, (xmin, ymin), (xmax, ymax), width, height) # TODO: height and width ought to be stored
+
+                    with open(ann_path, 'w') as new_file:
+                        for line in lines:
+                            if line != yolo_line + '\n':
+                                new_file.write(line)
+                            elif 'change_class' in action:
+                                new_yolo_line = yolo_format(new_class_index, (xmin, ymin), (xmax, ymax), width, height)
+                                new_file.write(new_yolo_line + '\n')
+                            elif 'resize_bbox' in action:
+                                new_yolo_line = yolo_format(class_index, (new_x_left, new_y_top), (new_x_right, new_y_bottom), width, height)
+                                new_file.write(new_yolo_line + '\n')
+
             elif '.xml' in ann_path:
                 # edit PASCAL VOC file
                 tree = ET.parse(ann_path)
@@ -679,8 +706,12 @@ def create_PASCAL_VOC_xml(xml_path, abs_path, folder_name, image_name, img_heigh
 def save_bounding_box(annotation_paths, class_index, point_1, point_2, width, height):
     for ann_path in annotation_paths:
         if '.txt' in ann_path:
-            line = yolo_format(class_index, point_1, point_2, width, height)
-            append_bb(ann_path, line, '.txt')
+            if ('/text_format/' in ann_path) or ('\\text_format\\' in ann_path):
+        	    line = text_format(CLASS_LIST[class_index], point_1, point_2)
+        	    append_bb(ann_path, line, '.txt')
+            else:
+                line = yolo_format(class_index, point_1, point_2, width, height)
+                append_bb(ann_path, line, '.txt')
         elif '.xml' in ann_path:
             line = voc_format(CLASS_LIST[class_index], point_1, point_2)
             append_bb(ann_path, line, '.xml')
