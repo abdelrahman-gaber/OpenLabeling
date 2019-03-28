@@ -5,6 +5,7 @@
 Image labeling in multiple annotation formats:
 - PASCAL VOC (= [darkflow](https://github.com/thtrieu/darkflow))
 - [YOLO darknet](https://github.com/pjreddie/darknet)
+- Text files compatible with the evaluation code [here](https://github.com/Cartucho/mAP)
 - ask for more (create a new issue)...
 
 <img src="https://media.giphy.com/media/l49JDgDSygJN369vW/giphy.gif" width="40%"><img src="https://media.giphy.com/media/3ohc1csRs9PoDgCeuk/giphy.gif" width="40%">
